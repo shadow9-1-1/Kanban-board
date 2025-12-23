@@ -21,6 +21,9 @@ export default {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
 
+  // Transform ESM packages that Jest can't handle natively
+  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
+
   // Handle CSS imports in tests
   // identity-obj-proxy returns class names as-is (useful for CSS Modules)
   moduleNameMapper: {

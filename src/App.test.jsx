@@ -23,17 +23,37 @@ import { render, screen } from '@testing-library/react'
 import App from './App'
 
 describe('App Component', () => {
+  beforeEach(() => {
+    // Clear localStorage before each test
+    localStorage.clear()
+  })
+
   it('renders without crashing', () => {
     render(<App />)
     // Basic smoke test - component renders without throwing
     expect(document.body).toBeInTheDocument()
   })
 
-  it('displays the main heading or content', () => {
+  it('displays the header with app title', () => {
     render(<App />)
-    // Modify this test based on your actual App content
-    // Using getByRole for heading is more reliable
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/vite/i)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/kanban board/i)
+  })
+
+  it('displays the toolbar with Add List button', () => {
+    render(<App />)
+    expect(screen.getByTestId('add-column-button')).toBeInTheDocument()
+  })
+
+  it('displays the board region', () => {
+    render(<App />)
+    expect(screen.getByTestId('board')).toBeInTheDocument()
+  })
+
+  it('displays default columns', () => {
+    render(<App />)
+    expect(screen.getByText('To Do')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
   })
 })
 
