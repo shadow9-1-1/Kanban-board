@@ -1,99 +1,50 @@
-/**
- * App Component - Main Application Entry Point
- *
- * This is the root component that orchestrates the entire Kanban board.
- * It connects the useBoard hook with all child components.
- *
- * ARCHITECTURE OVERVIEW:
- * =====================
- *
- *                        ┌─────────────┐
- *                        │     App     │
- *                        │  (useBoard) │
- *                        └──────┬──────┘
- *                               │
- *          ┌────────────────────┼────────────────────┐
- *          │                    │                    │
- *    ┌─────▼─────┐        ┌─────▼─────┐       ┌──────▼──────┐
- *    │  Header   │        │  Toolbar  │       │   Board     │
- *    └───────────┘        └───────────┘       └──────┬──────┘
- *                                                    │
- *                               ┌────────────────────┼────────────────────┐
- *                               │                    │                    │
- *                         ┌─────▼─────┐        ┌─────▼─────┐        ┌─────▼─────┐
- *                         │ListColumn │        │ListColumn │        │ListColumn │
- *                         └─────┬─────┘        └───────────┘        └───────────┘
- *                               │
- *                    ┌──────────┼──────────┐
- *                    │          │          │
- *              ┌─────▼─────┐ ┌──▼──┐ ┌─────▼─────┐
- *              │   Card    │ │Card │ │   Card    │
- *              └───────────┘ └─────┘ └───────────┘
- *
- *
- * DATA FLOW:
- * 1. useBoard hook manages all state (columns, cards, modals)
- * 2. App passes state and handlers to children via props
- * 3. Children call handlers (passed as props) to request state changes
- * 4. useBoard updates state, React re-renders affected components
- *
- * COMPONENT RESPONSIBILITIES:
- * - Header: Branding, navigation (static)
- * - Toolbar: Board-level actions (add column)
- * - Board: DnD context, renders columns
- * - ListColumn: Column operations, renders cards
- * - Card: Card display, drag source
- * - CardDetailModal: Edit card details
- * - ConfirmDialog: Destructive action confirmation
- */
-
 import './App.css'
 import { Header, Toolbar, Board, CardDetailModal, ConfirmDialog } from './components'
-import { useBoard } from './hooks'
+import { BoardProvider, useBoardState, useBoardActions } from './context'
 
-function App() {
-  // Get all state and handlers from the custom hook
+
+function AppContent() {
+
+  const { board: boardData, ui } = useBoardState()
+
+  // Get action handlers from context
   const {
-    boardData,
-    selectedCard,
-    confirmDialog,
-    addColumn,
-    renameColumn,
-    archiveColumn,
-    addCard,
-    updateCard,
-    deleteCard,
-    moveCard,
-    openCardModal,
-    closeCardModal,
-    showConfirmDialog,
-    closeConfirmDialog,
-  } = useBoard()
+    handleAddColumn,
+    handleRenameColumn,
+    handleArchiveColumn,
+    handleAddCard,
+    handleUpdateCard,
+    handleDeleteCard,
+    handleMoveCard,
+    handleOpenModal,
+    handleCloseModal,
+    handleShowDialog,
+    handleHideDialog,
+  } = useBoardActions()
 
-  /**
-   * Handle column archive with confirmation
-   * Shows a confirm dialog before actually archiving
-   */
-  const handleArchiveColumn = (columnId) => {
+  
+  const onArchiveColumn = (columnId) => {
     const column = boardData.columns[columnId]
     const cardCount = column.cardIds.length
 
-    showConfirmDialog(
+    handleShowDialog(
       'Archive List?',
       `This will permanently delete "${column.title}" and ${cardCount} card${cardCount !== 1 ? 's' : ''}. This action cannot be undone.`,
-      () => archiveColumn(columnId)
+      () => handleArchiveColumn(columnId)
     )
   }
 
-  /**
-   * Handle card delete with confirmation
-   */
-  const handleDeleteCard = (cardId, columnId) => {
+
+  const onDeleteCard = (cardId, columnId) => {
     const card = boardData.cards[cardId]
 
-    showConfirmDialog('Delete Card?', `This will permanently delete "${card.title}".`, () =>
-      deleteCard(cardId, columnId)
+    handleShowDialog('Delete Card?', `This will permanently delete "${card.title}".`, () =>
+      handleDeleteCard(cardId, columnId)
     )
+  }
+
+  const onCardClick = (card, columnId) => {
+    handleOpenModal({ ...card, columnId })
   }
 
   return (
@@ -102,40 +53,49 @@ function App() {
       <Header />
 
       {/* Toolbar for board actions */}
-      <Toolbar onAddColumn={addColumn} />
+      <Toolbar onAddColumn={handleAddColumn} />
 
       {/* Main Board Area - scrollable */}
       <main className="flex-1 overflow-hidden">
         <Board
           boardData={boardData}
-          onMoveCard={moveCard}
-          onRenameColumn={renameColumn}
-          onArchiveColumn={handleArchiveColumn}
-          onAddCard={addCard}
-          onCardClick={openCardModal}
-          onDeleteCard={handleDeleteCard}
+          onMoveCard={handleMoveCard}
+          onRenameColumn={handleRenameColumn}
+          onArchiveColumn={onArchiveColumn}
+          onAddCard={handleAddCard}
+          onCardClick={onCardClick}
+          onDeleteCard={onDeleteCard}
         />
       </main>
 
       {/* Card Detail Modal - rendered when a card is selected */}
-      {selectedCard && (
+      {ui.selectedCard && (
         <CardDetailModal
-          card={selectedCard}
-          onClose={closeCardModal}
-          onSave={updateCard}
-          onDelete={handleDeleteCard}
+          card={ui.selectedCard}
+          onClose={handleCloseModal}
+          onSave={handleUpdateCard}
+          onDelete={onDeleteCard}
         />
       )}
 
       {/* Confirmation Dialog - rendered when confirmation is needed */}
       <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={closeConfirmDialog}
+        isOpen={ui.confirmDialog.isOpen}
+        title={ui.confirmDialog.title}
+        message={ui.confirmDialog.message}
+        onConfirm={ui.confirmDialog.onConfirm}
+        onCancel={handleHideDialog}
       />
     </div>
+  )
+}
+
+
+function App() {
+  return (
+    <BoardProvider>
+      <AppContent />
+    </BoardProvider>
   )
 }
 

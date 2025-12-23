@@ -38,8 +38,6 @@ function Header() {
             <h1 className="text-2xl font-bold tracking-tight">Kanban Board</h1>
           </div>
 
-          {/* Optional: User info or settings could go here */}
-          <div className="text-sm opacity-75">University Assignment</div>
         </div>
       </div>
     </header>
