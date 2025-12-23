@@ -16,12 +16,10 @@ export default defineConfig({
     pageLoadTimeout: 30000,
 
     retries: {
-      runMode: 2, 
+      runMode: 2,
       openMode: 0,
     },
 
-    setupNodeEvents(_on, _config) {
-        
-    },
+    setupNodeEvents(_on, _config) {},
   },
 })

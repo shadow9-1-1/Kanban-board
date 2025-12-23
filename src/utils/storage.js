@@ -1,48 +1,35 @@
-/**
- * Local Storage Utility
- *
- * Handles persisting board data to localStorage.
- * This allows the Kanban board to maintain state across browser sessions.
- */
+// Local Storage Utility - Handles persisting board data to localStorage
+const DEFAULT_STORAGE_KEY = 'kanban-board-data'
 
-const STORAGE_KEY = 'kanban-board-data'
-
-/**
- * Save board data to localStorage
- * @param {Object} data - The board state to persist
- */
-export const saveToStorage = (data) => {
+// Save data to localStorage
+export const saveToStorage = (key, data) => {
+  if (data === undefined) {
+    data = key
+    key = DEFAULT_STORAGE_KEY
+  }
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    localStorage.setItem(key, JSON.stringify(data))
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Failed to save to localStorage:', error)
   }
 }
 
-/**
- * Load board data from localStorage
- * @returns {Object|null} The saved board state or null if none exists
- */
-export const loadFromStorage = () => {
+// Load data from localStorage
+export const loadFromStorage = (key = DEFAULT_STORAGE_KEY) => {
   try {
-    const data = localStorage.getItem(STORAGE_KEY)
+    const data = localStorage.getItem(key)
     return data ? JSON.parse(data) : null
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Failed to load from localStorage:', error)
     return null
   }
 }
 
-/**
- * Clear board data from localStorage
- */
-export const clearStorage = () => {
+// Clear data from localStorage
+export const clearStorage = (key = DEFAULT_STORAGE_KEY) => {
   try {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(key)
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Failed to clear localStorage:', error)
   }
 }

@@ -1,20 +1,4 @@
-/**
- * Toolbar Component
- *
- * Provides action buttons for board-level operations.
- * Currently supports adding new columns.
- *
- * PROPS:
- * @param {Function} onAddColumn - Callback when user wants to add a column
- *
- * COMPONENT COMMUNICATION:
- * 1. Toolbar receives onAddColumn from App (which gets it from useBoard hook)
- * 2. When user clicks "Add List", we prompt for a title
- * 3. If valid title provided, we call onAddColumn(title)
- * 4. useBoard.addColumn() creates the column with a new UUID
- * 5. React re-renders Board with the new column
- */
-
+// Toolbar - Action buttons for board-level operations
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 

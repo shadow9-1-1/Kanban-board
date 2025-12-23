@@ -1,66 +1,21 @@
-/**
- * CardDetailModal Component
- *
- * A modal dialog for viewing and editing card details.
- * Supports editing title, description, and tags.
- *
- * HOW THE MODAL WORKS:
- * ===================
- * 1. OPENING: When user clicks a Card, App calls openCardModal(card, columnId)
- *    - useBoard hook sets selectedCard state
- *    - App passes selectedCard to CardDetailModal
- *    - Modal renders when selectedCard is not null
- *
- * 2. EDITING: User modifies fields in the modal
- *    - Local state tracks changes (editTitle, editDescription, editTags)
- *    - Changes don't affect the board until user clicks "Save"
- *
- * 3. SAVING: User clicks "Save Changes"
- *    - Modal calls onSave(cardId, { title, description, tags })
- *    - App passes this to useBoard.updateCard()
- *    - Board state updates, modal closes
- *
- * 4. CLOSING: User clicks outside, presses Escape, or clicks X
- *    - onClose() is called
- *    - selectedCard is set to null
- *    - Modal unmounts
- *
- * PROPS:
- * @param {Object} card - The card being edited { id, title, description, tags, columnId }
- * @param {Function} onClose - Callback to close the modal
- * @param {Function} onSave - Callback to save changes
- * @param {Function} onDelete - Callback to delete the card
- */
-
-import { useState, useEffect, useRef } from 'react'
+// CardDetailModal - Modal for viewing and editing card details
+import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
+import { useFocusTrap } from '../hooks/useAccessibility'
 
 function CardDetailModal({ card, onClose, onSave, onDelete }) {
-  // Local state for editing - initialized from card props
   const [editTitle, setEditTitle] = useState(card.title)
   const [editDescription, setEditDescription] = useState(card.description || '')
   const [editTags, setEditTags] = useState(card.tags?.join(', ') || '')
+  const [errors, setErrors] = useState({})
 
-  // Ref for focusing the title input on open
-  const titleInputRef = useRef(null)
+  const { containerRef } = useFocusTrap({
+    isActive: true,
+    onEscape: onClose,
+    autoFocus: true,
+    restoreFocus: true,
+  })
 
-  // Focus title input when modal opens
-  useEffect(() => {
-    titleInputRef.current?.focus()
-  }, [])
-
-  // Handle keyboard events (Escape to close)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
-  // Prevent body scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -68,12 +23,19 @@ function CardDetailModal({ card, onClose, onSave, onDelete }) {
     }
   }, [])
 
+  const validateTitle = useCallback((value) => {
+    if (!value.trim()) return 'Title is required'
+    if (value.trim().length < 2) return 'Title must be at least 2 characters'
+    return null
+  }, [])
+
   const handleSave = () => {
-    if (!editTitle.trim()) {
-      return // Don't save empty titles
+    const titleError = validateTitle(editTitle)
+    if (titleError) {
+      setErrors({ title: titleError })
+      return
     }
 
-    // Parse tags from comma-separated string
     const tagsArray = editTags
       .split(',')
       .map((tag) => tag.trim())
@@ -92,6 +54,13 @@ function CardDetailModal({ card, onClose, onSave, onDelete }) {
     onClose()
   }
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -99,63 +68,69 @@ function CardDetailModal({ card, onClose, onSave, onDelete }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      aria-describedby="modal-description"
     >
-      {/* Backdrop - click to close */}
       <div
         className="absolute inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Content */}
-      <div className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl">
-        {/* Header */}
+      <div
+        ref={containerRef}
+        className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl"
+        onKeyDown={handleKeyDown}
+      >
         <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
             Edit Card
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             aria-label="Close modal"
             data-testid="close-modal"
           >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Form */}
+        <p id="modal-description" className="sr-only">
+          Edit the card title, description, and tags. Press Escape to close without saving.
+        </p>
+
         <div className="space-y-4 p-4">
-          {/* Title Field */}
           <div>
             <label htmlFor="card-title" className="mb-1 block text-sm font-medium text-gray-700">
-              Title
+              Title <span className="text-red-500" aria-hidden="true">*</span>
             </label>
             <input
-              ref={titleInputRef}
               id="card-title"
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              onChange={(e) => {
+                setEditTitle(e.target.value)
+                if (errors.title) setErrors({})
+              }}
+              className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500'
+              }`}
               placeholder="Enter card title..."
+              aria-required="true"
+              aria-invalid={errors.title ? 'true' : 'false'}
+              aria-describedby={errors.title ? 'title-error' : undefined}
               data-testid="card-title-input"
             />
+            {errors.title && (
+              <p id="title-error" className="mt-1 text-sm text-red-600" role="alert">{errors.title}</p>
+            )}
           </div>
 
-          {/* Description Field */}
           <div>
-            <label
-              htmlFor="card-description"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="card-description" className="mb-1 block text-sm font-medium text-gray-700">
               Description
             </label>
             <textarea
@@ -163,73 +138,63 @@ function CardDetailModal({ card, onClose, onSave, onDelete }) {
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               rows={4}
-              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Add a more detailed description..."
               data-testid="card-description-input"
             />
           </div>
 
-          {/* Tags Field */}
           <div>
-            <label htmlFor="card-tags" className="mb-1 block text-sm font-medium text-gray-700">
-              Tags
-              <span className="ml-1 text-xs font-normal text-gray-400">(comma-separated)</span>
-            </label>
+            <label htmlFor="card-tags" className="mb-1 block text-sm font-medium text-gray-700">Tags</label>
             <input
               id="card-tags"
               type="text"
               value={editTags}
               onChange={(e) => setEditTags(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="urgent, feature, bug..."
+              aria-describedby="tags-hint"
               data-testid="card-tags-input"
             />
-            <p className="mt-1 text-xs text-gray-500">Suggested: urgent, feature, bug, design</p>
+            <p id="tags-hint" className="mt-1 text-xs text-gray-600">
+              Separate tags with commas.
+            </p>
           </div>
 
-          {/* Card Metadata */}
-          <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-            <p>
-              <span className="font-medium">Card ID:</span> {card.id.slice(0, 8)}...
-            </p>
+          <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+            <p><span className="font-medium">Card ID:</span> {card.id.slice(0, 8)}...</p>
             {card.createdAt && (
-              <p>
-                <span className="font-medium">Created:</span>{' '}
-                {new Date(card.createdAt).toLocaleDateString()}
-              </p>
+              <p><span className="font-medium">Created:</span> {new Date(card.createdAt).toLocaleDateString()}</p>
             )}
           </div>
         </div>
 
-        {/* Footer Actions */}
         <div className="flex items-center justify-between border-t border-gray-200 p-4">
           <button
+            type="button"
             onClick={handleDelete}
-            className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             data-testid="delete-card-modal"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             Delete
           </button>
 
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               data-testid="cancel-modal"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSave}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               data-testid="save-card-button"
             >
               Save Changes

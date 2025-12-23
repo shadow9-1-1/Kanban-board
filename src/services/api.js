@@ -1,38 +1,8 @@
-/**
- * API Client Service
- *
- * HTTP client for communicating with the server.
- * Supports offline detection and version tracking for conflict resolution.
- *
- * OPTIMISTIC UI PATTERN:
- * =====================
- *
- * 1. User performs action (e.g., add card)
- * 2. UI updates immediately (optimistic)
- * 3. Action is queued for sync
- * 4. On sync success → confirm (no change needed)
- * 5. On sync failure → revert UI + show error
- *
- * VERSION TRACKING:
- * ================
- *
- * Each board state has a version number.
- * When syncing, we send our version.
- * Server responds with:
- * - 200: Success, new version
- * - 409: Conflict, server version is newer
- *
- * On conflict, we can:
- * - Fetch latest state and merge
- * - Or discard local changes
- */
-
+// API Client Service - HTTP client for server communication
 const API_BASE_URL = '/api'
-const REQUEST_TIMEOUT = 10000 // 10 seconds
+const REQUEST_TIMEOUT = 10000
 
-/**
- * Custom error for API failures
- */
+// Custom error for API failures
 export class ApiError extends Error {
   constructor(message, status, data = null) {
     super(message)
@@ -42,17 +12,9 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Make HTTP request with timeout and error handling
- *
- * @param {string} endpoint - API endpoint
- * @param {Object} options - Fetch options
- * @returns {Promise<Object>} Response data
- */
+// Make HTTP request with timeout and error handling
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`
-
-  // Create abort controller for timeout
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
@@ -67,8 +29,6 @@ async function request(endpoint, options = {}) {
     })
 
     clearTimeout(timeoutId)
-
-    // Parse response
     const data = await response.json().catch(() => null)
 
     if (!response.ok) {
@@ -79,46 +39,30 @@ async function request(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(timeoutId)
 
-    // Handle abort (timeout)
     if (error.name === 'AbortError') {
       throw new ApiError('Request timeout', 408)
     }
 
-    // Handle network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new ApiError('Network error - you may be offline', 0)
     }
 
-    // Re-throw ApiError as-is
     if (error instanceof ApiError) {
       throw error
     }
 
-    // Wrap unknown errors
     throw new ApiError(error.message, 500)
   }
 }
 
-/**
- * API Client
- *
- * All methods return promises and throw ApiError on failure.
- */
+// API Client with all endpoints
 export const api = {
-  /**
-   * Fetch entire board state from server
-   * @returns {Promise<Object>} Board data with version
-   */
+  // Fetch entire board state from server
   async getBoard() {
     return request('/board')
   },
 
-  /**
-   * Save entire board state to server
-   * @param {Object} board - Board data
-   * @param {number} version - Client's current version
-   * @returns {Promise<Object>} { version, board }
-   */
+  // Save entire board state to server
   async saveBoard(board, version) {
     return request('/board', {
       method: 'PUT',
@@ -126,25 +70,30 @@ export const api = {
     })
   },
 
-  /**
-   * Sync a single action with the server
-   *
-   * @param {Object} action - Action to sync { type, payload }
-   * @param {number} version - Client's version at time of action
-   * @returns {Promise<Object>} { version, result }
-   */
+  // Sync a single action with the server
   async syncAction(action, version) {
-    return request('/board/sync', {
+    try {
+      return await request('/board/sync', {
+        method: 'POST',
+        body: JSON.stringify({ action, version }),
+      })
+    } catch (error) {
+      if (error.status === 409 && error.data) {
+        error.response = error.data
+      }
+      throw error
+    }
+  },
+
+  // Submit a resolved merge to the server
+  async submitMerge(mergedBoard, baseVersion, serverVersion) {
+    return request('/board/merge', {
       method: 'POST',
-      body: JSON.stringify({ action, version }),
+      body: JSON.stringify({ mergedBoard, baseVersion, serverVersion }),
     })
   },
 
-  // ==================== COLUMN OPERATIONS ====================
-
-  /**
-   * Add a new column
-   */
+  // Add a new column
   async addColumn(id, title, version) {
     return request('/columns', {
       method: 'POST',
@@ -152,9 +101,7 @@ export const api = {
     })
   },
 
-  /**
-   * Rename a column
-   */
+  // Rename a column
   async renameColumn(columnId, title, version) {
     return request(`/columns/${columnId}`, {
       method: 'PATCH',
@@ -162,9 +109,7 @@ export const api = {
     })
   },
 
-  /**
-   * Archive (delete) a column
-   */
+  // Archive (delete) a column
   async archiveColumn(columnId, version) {
     return request(`/columns/${columnId}`, {
       method: 'DELETE',
@@ -172,11 +117,7 @@ export const api = {
     })
   },
 
-  // ==================== CARD OPERATIONS ====================
-
-  /**
-   * Add a new card to a column
-   */
+  // Add a new card to a column
   async addCard(columnId, card, version) {
     return request(`/columns/${columnId}/cards`, {
       method: 'POST',
@@ -184,9 +125,7 @@ export const api = {
     })
   },
 
-  /**
-   * Update a card
-   */
+  // Update a card
   async updateCard(cardId, updates, version) {
     return request(`/cards/${cardId}`, {
       method: 'PATCH',
@@ -194,9 +133,7 @@ export const api = {
     })
   },
 
-  /**
-   * Delete a card
-   */
+  // Delete a card
   async deleteCard(cardId, columnId, version) {
     return request(`/cards/${cardId}`, {
       method: 'DELETE',
@@ -204,36 +141,19 @@ export const api = {
     })
   },
 
-  /**
-   * Move a card (within or between columns)
-   */
+  // Move a card within or between columns
   async moveCard(cardId, sourceColumnId, destColumnId, destIndex, version) {
     return request(`/cards/${cardId}/move`, {
       method: 'POST',
-      body: JSON.stringify({
-        sourceColumnId,
-        destColumnId,
-        destIndex,
-        version,
-      }),
+      body: JSON.stringify({ sourceColumnId, destColumnId, destIndex, version }),
     })
   },
 }
 
-/**
- * Check if browser is online
- * @returns {boolean}
- */
-export const isOnline = () => {
-  return navigator.onLine
-}
+// Check if browser is online
+export const isOnline = () => navigator.onLine
 
-/**
- * Utility to wrap API calls with online check
- *
- * @param {Function} apiCall - API function to call
- * @returns {Promise<Object>} API response or throws if offline
- */
+// Utility to wrap API calls with online check
 export async function withOnlineCheck(apiCall) {
   if (!isOnline()) {
     throw new ApiError('You are offline', 0)

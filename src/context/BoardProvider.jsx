@@ -1,32 +1,4 @@
-/**
- * Board Provider
- *
- * Central state management provider for the Kanban board.
- * Combines useReducer with localStorage persistence and sync queue.
- *
- * FEATURES:
- * 1. useReducer for predictable state updates
- * 2. Automatic localStorage persistence
- * 3. Debounced saves to prevent excessive writes
- * 4. Hydration from localStorage on mount
- * 5. Sync queue integration for offline support
- * 6. Optimistic UI with revert on failure
- *
- * OPTIMISTIC UPDATE FLOW:
- * =======================
- * 1. User dispatches action
- * 2. State updated immediately (optimistic)
- * 3. Previous state saved for potential revert
- * 4. Action queued for sync
- * 5. On sync success → confirm (version updated)
- * 6. On sync failure → revert to previous state
- *
- * ARCHITECTURE:
- * - Uses split context pattern (state/dispatch) for performance
- * - Provides custom hooks for convenient access
- * - Handles localStorage errors gracefully
- */
-
+// Board Provider - Central state management with localStorage persistence
 import { useReducer, useEffect, useMemo, useCallback, useRef } from 'react'
 import { isDev } from '../utils/env'
 import PropTypes from 'prop-types'
@@ -50,15 +22,11 @@ const SYNCABLE_ACTIONS = new Set([
   ActionTypes.CARD_MOVE,
 ])
 
-/**
- * Initialize state from localStorage or create fresh state
- * @returns {Object} Initial state for useReducer
- */
+// Initialize state from localStorage or create fresh state
 const getInitialState = () => {
   const savedBoard = loadFromStorage(STORAGE_KEY)
 
   if (savedBoard) {
-    // Hydrate with saved board data, fresh UI state
     return {
       board: {
         ...savedBoard,
@@ -73,6 +41,14 @@ const getInitialState = () => {
           message: '',
           onConfirm: null,
         },
+        conflictDialog: {
+          isOpen: false,
+          conflicts: [],
+          localState: null,
+          serverState: null,
+          baseState: null,
+          resolutions: {},
+        },
       },
     }
   }
@@ -80,122 +56,66 @@ const getInitialState = () => {
   return createInitialState()
 }
 
-/**
- * BoardProvider Component
- *
- * Wraps the application with board state context.
- *
- * @param {Object} props
- * @param {React.ReactNode} props.children - Child components
- *
- * @example
- * <BoardProvider>
- *   <App />
- * </BoardProvider>
- */
+// BoardProvider component wraps the app with board state context
 export const BoardProvider = ({ children }) => {
-  // Initialize reducer with persisted or fresh state
   const [state, dispatch] = useReducer(boardReducer, null, getInitialState)
-
-  // Ref for debounce timer
   const saveTimerRef = useRef(null)
-
-  // Ref to store previous state for revert
   const previousStateRef = useRef(null)
 
-  /**
-   * Persist board state to localStorage
-   * Uses debouncing to prevent excessive writes during rapid updates
-   */
-  useEffect(() => {
-    // Clear any pending save
+  // Persist board state to localStorage with debouncing
+  const persistToStorage = useCallback((boardState) => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
 
-    // Debounce the save operation
     saveTimerRef.current = setTimeout(() => {
       try {
-        // Only persist board data, not UI state
-        saveToStorage(STORAGE_KEY, state.board)
+        saveToStorage(STORAGE_KEY, boardState)
+        if (isDev) console.log('Board state persisted to localStorage')
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to save board state:', error)
+        console.error('Failed to persist board state:', error)
       }
     }, SAVE_DEBOUNCE_MS)
+  }, [])
 
-    // Cleanup timer on unmount
+  // Save to localStorage whenever board changes
+  useEffect(() => {
+    persistToStorage(state.board)
+  }, [state.board, persistToStorage])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
       }
     }
-  }, [state.board])
-
-  /**
-   * Handle successful sync - update version
-   * Exposed via syncQueue.onSync for SyncProvider to call
-   */
-  useEffect(() => {
-    syncQueue.onSync = async (queueItem) => {
-      // The sync is handled by SyncProvider, but we can update version here
-      // eslint-disable-next-line no-console
-      console.log('[BoardProvider] Action synced:', queueItem.action.type)
-    }
-
-    syncQueue.onRevert = (queueItem) => {
-      // Revert could be handled here if we stored snapshots
-      // eslint-disable-next-line no-console
-      console.warn('[BoardProvider] Sync failed, manual refresh may be needed:', queueItem)
-    }
-
-    return () => {
-      syncQueue.onSync = null
-      syncQueue.onRevert = null
-    }
   }, [])
 
-  /**
-   * Enhanced dispatch with sync queue integration
-   *
-   * For syncable actions:
-   * 1. Store current state for potential revert
-   * 2. Dispatch action (optimistic update)
-   * 3. Enqueue action for server sync
-   */
+  // Enhanced dispatch with sync queue integration
   const enhancedDispatch = useCallback(
     (action) => {
-      // Development logging
       if (isDev) {
-        // eslint-disable-next-line no-console
         console.group(`Action: ${action.type}`)
-        // eslint-disable-next-line no-console
         console.log('Payload:', action.payload)
-        // eslint-disable-next-line no-console
+        console.log('Current version:', state.board.version)
         console.groupEnd()
       }
 
-      // Check if this action should be synced
       if (SYNCABLE_ACTIONS.has(action.type)) {
-        // Store previous state for potential revert
         previousStateRef.current = state
-
-        // Enqueue for sync (with current version)
         syncQueue.enqueue(action, state.board.version)
 
-        // Try to sync immediately if online
         if (navigator.onLine) {
           syncQueue.processQueue(true)
         }
       }
 
-      // Dispatch the action (optimistic update)
       dispatch(action)
     },
     [state]
   )
 
-  // Memoize context values to prevent unnecessary re-renders
   const stateValue = useMemo(
     () => ({
       board: state.board,
@@ -204,7 +124,6 @@ export const BoardProvider = ({ children }) => {
     [state.board, state.ui]
   )
 
-  // Dispatch is stable, but we wrap it to ensure consistency
   const dispatchValue = useMemo(() => enhancedDispatch, [enhancedDispatch])
 
   return (

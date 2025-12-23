@@ -1,10 +1,4 @@
-/**
- * Custom hooks for accessing Board context
- *
- * These hooks provide type-safe, convenient access to board state and dispatch.
- * They throw helpful errors if used outside of BoardProvider.
- */
-
+// Custom hooks for accessing Board context
 import { useContext, useCallback, useMemo } from 'react'
 import { BoardStateContext, BoardDispatchContext } from './BoardContext'
 import {
@@ -24,82 +18,34 @@ import {
 } from './boardActions'
 import { generateId } from '../utils'
 
-/**
- * Hook to access board state
- *
- * @returns {{ board: Object, ui: Object }} Current board state
- * @throws {Error} If used outside BoardProvider
- *
- * @example
- * const { board, ui } = useBoardState()
- * console.log(board.columns, board.cards)
- */
+// Hook to access board state
 export const useBoardState = () => {
   const context = useContext(BoardStateContext)
-
   if (context === null) {
     throw new Error('useBoardState must be used within a BoardProvider')
   }
-
   return context
 }
 
-/**
- * Hook to access dispatch function
- *
- * @returns {Function} Dispatch function
- * @throws {Error} If used outside BoardProvider
- *
- * @example
- * const dispatch = useBoardDispatch()
- * dispatch(addCard(columnId, card))
- */
+// Hook to access dispatch function
 export const useBoardDispatch = () => {
   const context = useContext(BoardDispatchContext)
-
   if (context === null) {
     throw new Error('useBoardDispatch must be used within a BoardProvider')
   }
-
   return context
 }
 
-/**
- * Combined hook for both state and dispatch
- *
- * @returns {{ state: Object, dispatch: Function }}
- *
- * @example
- * const { state, dispatch } = useBoard()
- */
+// Combined hook for both state and dispatch
 export const useBoard = () => {
   const state = useBoardState()
   const dispatch = useBoardDispatch()
-
   return { state, dispatch }
 }
 
-/**
- * Hook providing pre-bound action dispatchers
- *
- * Returns memoized action functions that automatically dispatch.
- * This is the recommended way to dispatch actions from components.
- *
- * @returns {Object} Object containing all bound action functions
- *
- * @example
- * const { handleAddColumn, handleAddCard, handleMoveCard } = useBoardActions()
- *
- * // Add a new column
- * handleAddColumn('New Column')
- *
- * // Add a card to a column
- * handleAddCard('column-1', { title: 'New Task', description: '', tags: [] })
- */
+// Hook providing pre-bound action dispatchers
 export const useBoardActions = () => {
   const dispatch = useBoardDispatch()
-
-  // ==================== BOARD ACTIONS ====================
 
   const handleLoadBoard = useCallback(
     (data) => {
@@ -111,8 +57,6 @@ export const useBoardActions = () => {
   const handleResetBoard = useCallback(() => {
     dispatch(resetBoard())
   }, [dispatch])
-
-  // ==================== COLUMN ACTIONS ====================
 
   const handleAddColumn = useCallback(
     (title) => {
@@ -137,19 +81,11 @@ export const useBoardActions = () => {
     [dispatch]
   )
 
-  // ==================== CARD ACTIONS ====================
-
   const handleAddCard = useCallback(
     (columnId, cardData) => {
-      const card = {
-        id: generateId(),
-        title: cardData.title,
-        description: cardData.description || '',
-        tags: cardData.tags || [],
-        createdAt: new Date().toISOString(),
-      }
-      dispatch(addCard(columnId, card))
-      return card.id
+      const id = generateId()
+      dispatch(addCard(id, columnId, cardData.title, cardData.description || '', cardData.tags || []))
+      return id
     },
     [dispatch]
   )
@@ -175,8 +111,6 @@ export const useBoardActions = () => {
     [dispatch]
   )
 
-  // ==================== UI ACTIONS ====================
-
   const handleOpenModal = useCallback(
     (card) => {
       dispatch(openModal(card))
@@ -199,28 +133,25 @@ export const useBoardActions = () => {
     dispatch(hideDialog())
   }, [dispatch])
 
-  // Memoize the entire actions object
   return useMemo(
     () => ({
-      // Board
+      dispatch,
       handleLoadBoard,
       handleResetBoard,
-      // Columns
       handleAddColumn,
       handleRenameColumn,
       handleArchiveColumn,
-      // Cards
       handleAddCard,
       handleUpdateCard,
       handleDeleteCard,
       handleMoveCard,
-      // UI
       handleOpenModal,
       handleCloseModal,
       handleShowDialog,
       handleHideDialog,
     }),
     [
+      dispatch,
       handleLoadBoard,
       handleResetBoard,
       handleAddColumn,
