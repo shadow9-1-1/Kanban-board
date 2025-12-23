@@ -33,6 +33,17 @@ export default {
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
   },
 
+  // Mock import.meta.env for Vite compatibility
+  globals: {
+    'import.meta': {
+      env: {
+        DEV: false,
+        PROD: true,
+        MODE: 'test',
+      },
+    },
+  },
+
   // Where to look for test files
   testMatch: [
     '<rootDir>/src/**/*.test.{js,jsx}',

@@ -13,6 +13,7 @@ export const ActionTypes = {
   // ==================== BOARD ACTIONS ====================
   BOARD_LOAD: 'BOARD_LOAD', // Load entire board from storage
   BOARD_RESET: 'BOARD_RESET', // Reset to initial state
+  BOARD_SET_VERSION: 'BOARD_SET_VERSION', // Set board version number
 
   // ==================== COLUMN ACTIONS ====================
   COLUMN_ADD: 'COLUMN_ADD', // Add a new column
@@ -31,6 +32,11 @@ export const ActionTypes = {
   MODAL_CLOSE: 'MODAL_CLOSE', // Close card detail modal
   DIALOG_SHOW: 'DIALOG_SHOW', // Show confirmation dialog
   DIALOG_HIDE: 'DIALOG_HIDE', // Hide confirmation dialog
+
+  // ==================== SYNC ACTIONS ====================
+  SYNC_SET_STATUS: 'SYNC_SET_STATUS', // Update sync status
+  SYNC_ERROR: 'SYNC_ERROR', // Set sync error
+  SYNC_REVERT: 'SYNC_REVERT', // Revert an optimistic update
 }
 
 /**
@@ -187,4 +193,24 @@ export const showDialog = (title, message, onConfirm) => ({
  */
 export const hideDialog = () => ({
   type: ActionTypes.DIALOG_HIDE,
+})
+
+// ==================== SYNC ACTION CREATORS ====================
+
+/**
+ * Set board version (from server sync)
+ * @param {number} version - New version number
+ */
+export const setVersion = (version) => ({
+  type: ActionTypes.BOARD_SET_VERSION,
+  payload: { version },
+})
+
+/**
+ * Revert an optimistic update
+ * @param {Object} previousState - State before the optimistic update
+ */
+export const syncRevert = (previousState) => ({
+  type: ActionTypes.SYNC_REVERT,
+  payload: { previousState },
 })

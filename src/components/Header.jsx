@@ -1,7 +1,7 @@
 /**
  * Header Component
  *
- * Displays the application title and branding.
+ * Displays the application title, branding, and optional children (e.g., SyncStatus).
  * Fixed at the top of the viewport.
  *
  * STYLING EXPLANATION:
@@ -11,7 +11,9 @@
  * - z-50: High z-index to stay above other content
  */
 
-function Header() {
+import PropTypes from 'prop-types'
+
+function Header({ children }) {
   return (
     <header
       className="sticky top-0 z-50 bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg"
@@ -38,10 +40,22 @@ function Header() {
             <h1 className="text-2xl font-bold tracking-tight">Kanban Board</h1>
           </div>
 
+          {/* Right side content (e.g., SyncStatus) */}
+          {children && (
+            <div className="rounded-lg bg-white/10 px-3 py-1.5 backdrop-blur-sm">{children}</div>
+          )}
         </div>
       </div>
     </header>
   )
+}
+
+Header.propTypes = {
+  children: PropTypes.node,
+}
+
+Header.defaultProps = {
+  children: null,
 }
 
 export default Header

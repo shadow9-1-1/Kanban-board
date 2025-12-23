@@ -15,7 +15,9 @@
  *   board: {
  *     columns: { [id]: { id, title, cardIds: [] } },
  *     columnOrder: [id1, id2, id3],
- *     cards: { [id]: { id, title, description, tags, createdAt } }
+ *     cards: { [id]: { id, title, description, tags, createdAt } },
+ *     version: number,           // For sync conflict detection
+ *     lastModifiedAt: string     // ISO timestamp
  *   },
  *   ui: {
  *     selectedCard: null | { ...card, columnId },
@@ -26,13 +28,18 @@
 
 import { ActionTypes } from './boardActions'
 import { createInitialData } from '../utils'
+import { isDev } from '../utils/env'
 
 /**
  * Initial state factory
  * @returns {Object} Fresh initial state
  */
 export const createInitialState = () => ({
-  board: createInitialData(),
+  board: {
+    ...createInitialData(),
+    version: 1,
+    lastModifiedAt: new Date().toISOString(),
+  },
   ui: {
     selectedCard: null,
     confirmDialog: {
@@ -63,7 +70,11 @@ export const boardReducer = (state, action) => {
       const { data } = action.payload
       return {
         ...state,
-        board: data,
+        board: {
+          ...data,
+          version: data.version || 1,
+          lastModifiedAt: data.lastModifiedAt || new Date().toISOString(),
+        },
       }
     }
 
@@ -73,6 +84,29 @@ export const boardReducer = (state, action) => {
      */
     case ActionTypes.BOARD_RESET: {
       return createInitialState()
+    }
+
+    /**
+     * BOARD_SET_VERSION: Update version from server sync
+     */
+    case ActionTypes.BOARD_SET_VERSION: {
+      const { version } = action.payload
+      return {
+        ...state,
+        board: {
+          ...state.board,
+          version,
+          lastModifiedAt: new Date().toISOString(),
+        },
+      }
+    }
+
+    /**
+     * SYNC_REVERT: Revert to previous state on sync failure
+     */
+    case ActionTypes.SYNC_REVERT: {
+      const { previousState } = action.payload
+      return previousState
     }
 
     // ==================== COLUMN ACTIONS ====================
@@ -386,7 +420,7 @@ export const boardReducer = (state, action) => {
 
     default: {
       // In development, warn about unknown actions
-      if (process.env.NODE_ENV === 'development') {
+      if (isDev) {
         // eslint-disable-next-line no-console
         console.warn(`Unknown action type: ${action.type}`)
       }

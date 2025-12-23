@@ -1,8 +1,10 @@
 // Context objects (rarely needed directly)
 export { BoardStateContext, BoardDispatchContext } from './BoardContext'
+export { SyncContext } from './SyncContext'
 
-// Provider component
+// Provider components
 export { BoardProvider } from './BoardProvider'
+export { SyncProvider } from './SyncProvider'
 
 // Reducer and state factory
 export { boardReducer, createInitialState } from './boardReducer'
@@ -23,12 +25,11 @@ export {
   closeModal,
   showDialog,
   hideDialog,
+  setVersion,
+  syncRevert,
 } from './boardActions'
 
 // Custom hooks (recommended API)
-export {
-  useBoardState,
-  useBoardDispatch,
-  useBoard,
-  useBoardActions,
-} from './useBoardContext'
+export { useBoardState, useBoardDispatch, useBoard, useBoardActions } from './useBoardContext'
+
+export { useSync } from './useSync'

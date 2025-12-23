@@ -1,10 +1,9 @@
 import './App.css'
-import { Header, Toolbar, Board, CardDetailModal, ConfirmDialog } from './components'
-import { BoardProvider, useBoardState, useBoardActions } from './context'
+import { Header, Toolbar, Board, CardDetailModal, ConfirmDialog, SyncStatus } from './components'
+import { BoardProvider, SyncProvider, useBoardState, useBoardActions } from './context'
 
 
 function AppContent() {
-
   const { board: boardData, ui } = useBoardState()
 
   // Get action handlers from context
@@ -22,7 +21,7 @@ function AppContent() {
     handleHideDialog,
   } = useBoardActions()
 
-  
+
   const onArchiveColumn = (columnId) => {
     const column = boardData.columns[columnId]
     const cardCount = column.cardIds.length
@@ -43,14 +42,17 @@ function AppContent() {
     )
   }
 
+
   const onCardClick = (card, columnId) => {
     handleOpenModal({ ...card, columnId })
   }
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      {/* Fixed Header */}
-      <Header />
+      {/* Fixed Header with Sync Status */}
+      <Header>
+        <SyncStatus />
+      </Header>
 
       {/* Toolbar for board actions */}
       <Toolbar onAddColumn={handleAddColumn} />
@@ -68,7 +70,7 @@ function AppContent() {
         />
       </main>
 
-      {/* Card Detail Modal - rendered when a card is selected */}
+      {/* Card Detail Modal*/}
       {ui.selectedCard && (
         <CardDetailModal
           card={ui.selectedCard}
@@ -78,7 +80,6 @@ function AppContent() {
         />
       )}
 
-      {/* Confirmation Dialog - rendered when confirmation is needed */}
       <ConfirmDialog
         isOpen={ui.confirmDialog.isOpen}
         title={ui.confirmDialog.title}
@@ -93,9 +94,11 @@ function AppContent() {
 
 function App() {
   return (
-    <BoardProvider>
-      <AppContent />
-    </BoardProvider>
+    <SyncProvider>
+      <BoardProvider>
+        <AppContent />
+      </BoardProvider>
+    </SyncProvider>
   )
 }
 
