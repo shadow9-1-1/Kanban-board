@@ -1,14 +1,3 @@
-/**
- * ListColumn Component Unit Tests
- *
- * Tests the ListColumn component for:
- * - Rendering column with cards
- * - Add card functionality
- * - Rename column
- * - Archive column
- * - Card interactions
- */
-
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ListColumn from './ListColumn'

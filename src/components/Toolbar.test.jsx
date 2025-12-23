@@ -1,13 +1,3 @@
-/**
- * Toolbar Component Unit Tests
- *
- * Tests the Toolbar component for:
- * - Rendering action buttons
- * - Add column functionality
- * - Form input and submission
- * - Cancel functionality
- */
-
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Toolbar from './Toolbar'

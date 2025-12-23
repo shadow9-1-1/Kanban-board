@@ -1,14 +1,3 @@
-/**
- * Board Reducer Unit Tests
- *
- * Tests all reducer action types for correct state transitions.
- * Verifies immutability by checking that original state is not mutated.
- *
- * TEST ORGANIZATION:
- * - Grouped by action type category (Board, Column, Card, UI)
- * - Each test verifies: correct output + immutability
- */
-
 import { boardReducer, createInitialState } from './boardReducer'
 import { ActionTypes } from './boardActions'
 

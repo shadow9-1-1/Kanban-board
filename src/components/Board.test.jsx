@@ -1,7 +1,3 @@
-/**
- * Board Component Tests
- * Tests for the main Kanban board with drag and drop
- */
 
 import { render, screen, fireEvent } from '@testing-library/react'
 import Board from './Board'

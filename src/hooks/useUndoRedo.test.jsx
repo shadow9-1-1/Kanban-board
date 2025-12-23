@@ -1,13 +1,3 @@
-/**
- * Unit Tests for useUndoRedo Hook
- *
- * Tests the multi-level undo/redo hook that provides:
- * - History management with configurable depth
- * - Keyboard shortcut support
- * - Checkpoint creation
- * - State navigation
- */
-
 import { renderHook, act } from '@testing-library/react'
 import { useUndoRedo } from './useUndoRedo'
 

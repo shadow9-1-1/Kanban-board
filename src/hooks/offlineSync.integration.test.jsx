@@ -1,13 +1,3 @@
-/**
- * Offline Sync Integration Tests
- *
- * Tests the offline sync workflow including:
- * - Queue management
- * - Sync processing
- * - Error handling
- * - Online/Offline status
- */
-
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useOfflineSync } from './useOfflineSync'
 

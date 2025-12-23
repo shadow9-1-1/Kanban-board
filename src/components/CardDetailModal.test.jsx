@@ -1,8 +1,3 @@
-/**
- * CardDetailModal Component Tests
- * Tests for the card detail/edit modal
- */
-
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CardDetailModal from './CardDetailModal'

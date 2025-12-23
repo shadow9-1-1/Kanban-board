@@ -1,7 +1,3 @@
-/**
- * useBoard Hook Tests
- * Tests for the main board state management hook
- */
 
 import { renderHook, act } from '@testing-library/react'
 import { useBoard } from './useBoard'

@@ -1,18 +1,3 @@
-/**
- * Unit Tests for useBoardState Hook
- *
- * Tests the enhanced wrapper hook that provides:
- * - Selectors for accessing board state
- * - Computed values for derived data
- * - Bound action creators
- * - Batch operations
- *
- * NOTE: The board uses a normalized state shape:
- * - columns: { [id]: { id, title, cardIds: [] } }
- * - columnOrder: [id1, id2, ...]
- * - cards: { [id]: { id, title, description, tags, ... } }
- */
-
 import React from 'react'
 import { renderHook, act } from '@testing-library/react'
 import { useBoardState } from './useBoardState'

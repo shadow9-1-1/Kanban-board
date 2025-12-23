@@ -1,13 +1,3 @@
-/**
- * Unit Tests for useOfflineSync Hook
- *
- * Tests the offline synchronization hook that provides:
- * - Queue management for pending changes
- * - Automatic retries with exponential backoff
- * - Online/offline status tracking
- * - Persistence to localStorage
- */
-
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useOfflineSync } from './useOfflineSync'
 
@@ -23,9 +13,7 @@ import { saveToStorage, loadFromStorage } from '../utils'
 
 // ==================== HELPERS ====================
 
-/**
- * Helper to simulate online/offline events
- */
+
 const simulateOnline = () => {
   Object.defineProperty(navigator, 'onLine', { value: true, writable: true })
   window.dispatchEvent(new Event('online'))
